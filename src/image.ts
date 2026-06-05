@@ -1,13 +1,10 @@
+import {Point} from './filter.js';
+
 declare global {
   interface Window {
     onOpenCvReady: () => void;
     cv: any;
   }
-}
-
-export interface Point {
-  x: number;
-  y: number;
 }
 
 export function generateImageCanvas(
@@ -40,51 +37,6 @@ export function generateImageCanvas(
 
   const tempCanvas = document.createElement('canvas');
   cv.imshow(tempCanvas, warpedMat);
-  const ctx = tempCanvas.getContext('2d')!;
-
-  if (focalPoint) {
-    const focalPtMat =
-        cv.matFromArray(1, 1, cv.CV_32FC2, [focalPoint.x, focalPoint.y]);
-    const warpedFocalMat = new cv.Mat();
-
-    cv.perspectiveTransform(focalPtMat, warpedFocalMat, M);
-
-    const warpedFocalX = warpedFocalMat.data32F[0];
-    const warpedFocalY = warpedFocalMat.data32F[1];
-
-    focalPtMat.delete();
-    warpedFocalMat.delete();
-
-    const maxDimension = Math.max(maxWidth, maxHeight);
-    const innerRadius = maxDimension * 0.4;
-
-    const distTL = Math.hypot(warpedFocalX, warpedFocalY);
-    const distTR = Math.hypot(maxWidth - warpedFocalX, warpedFocalY);
-    const distBL = Math.hypot(warpedFocalX, maxHeight - warpedFocalY);
-    const distBR =
-        Math.hypot(maxWidth - warpedFocalX, maxHeight - warpedFocalY);
-    const outerRadius = Math.max(distTL, distTR, distBL, distBR);
-
-    const gradient = ctx.createRadialGradient(
-        warpedFocalX, warpedFocalY, innerRadius, warpedFocalX, warpedFocalY,
-        outerRadius);
-
-    // gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    // gradient.addColorStop(1, `rgba(0, 0, 0, ${maxOpacity})`);
-    const steps = 10;
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;  // From 0.0 to 1.0 linearly.
-
-      // Apply the Smoothstep formula to non-linearly scale the opacity
-      const easedT = (t * t * (3 - 2 * t));
-      const currentOpacity = maxOpacity * easedT;
-
-      gradient.addColorStop(t, `rgba(0, 0, 0, ${currentOpacity})`);
-    }
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, maxWidth, maxHeight);
-  }
 
   if (showGrid) {
     const ctx = tempCanvas.getContext('2d')!;

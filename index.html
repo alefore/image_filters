@@ -24,21 +24,11 @@ button, input { padding: 8px 12px; margin-right: 10px; }
     <div class="controls">
         <input type="file" id="imageInput" accept="image/*">
         <button id="saveBtn" disabled>Save</button>
-        <label for="distortion">Lens:</label>
-        <input type="range" min="-1.0" max="1.0" step="0.01" value="0" id=distortion>
+        <button id="updateBtn" disabled>Update</button>
         <span id="status">Loading OpenCV.js...</span>
     </div>
 
-    <div class="canvas-container">
-        <div>
-            <h3>Editor</h3>
-            <canvas id="editorCanvas"></canvas>
-        </div>
-        <div>
-            <h3>Preview</h3>
-            <canvas id="previewCanvas"></canvas>
-        </div>
-    </div>
+    <div id="canvas-container"></div>
 
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
     <script type="module" src="./dist/main.js"></script>
