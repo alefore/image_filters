@@ -10,6 +10,10 @@ class PerspectiveFilter extends DraggablePointsFilter {
     ]);
   }
 
+  protected get filterType(): string {
+    return 'PerspectiveFilter';
+  }
+
   public update(preview: boolean): void {
     const cv = window.cv;
     const [tl, tr, br, bl] = this.points.map((p) => this.getPixelPoint(p));
@@ -62,16 +66,18 @@ class PerspectiveFilter extends DraggablePointsFilter {
     dstCoords.delete();
     M.delete();
 
-    this.drawInputPoints();
+    this.drawEditor();
   }
 
   private drawEditor(): void {
+    this.drawInputPoints();
     const cv = (window as any).cv;
     const inputCtx = this.inputCanvas.getContext('2d')!;
     inputCtx.beginPath();
-    inputCtx.moveTo(this.points[0].x, this.points[0].y);
-    for (let i = 1; i < this.points.length; i++) {
-      inputCtx.lineTo(this.points[i].x, this.points[i].y);
+    const points = this.points.map((p) => this.getPixelPoint(p));
+    inputCtx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      inputCtx.lineTo(points[i].x, points[i].y);
     }
     inputCtx.closePath();
     inputCtx.lineWidth = 2;

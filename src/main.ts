@@ -1,4 +1,4 @@
-import {type ImageFilter, type Point} from './filter.js';
+import {type FilterConfig, type ImageFilter, type Point} from './filter.js';
 import {generateImageCanvas} from './image.js';
 import {LensCorrectionFilterFactory} from './lens_correction.js';
 import {PerspectiveFilterFactory} from './perspective.js';
@@ -16,7 +16,6 @@ interface FilterData {
   outputMat: any;
   outputCanvas: HTMLCanvasElement;
 }
-;
 
 class PerspectiveEditor {
   private status: HTMLElement;
@@ -115,11 +114,29 @@ class PerspectiveEditor {
       }
     });
     if (initialIndex === 0) inputMat.delete();
+
+    document.getElementById('filter-config')!.textContent = JSON.stringify(
+        this.filtersData.map(filterData => filterData.filter.getConfig()), null,
+        2);
+  }
+
+  public async loadConfig(file: File): Promise<void> {
+    const jsonString = await file.text();
+    try {
+      const loadedConfigs: FilterConfig[] = JSON.parse(jsonString);
+      this.filtersData.forEach(
+          (filterData, index) =>
+              filterData.filter.loadConfig(loadedConfigs[index]));
+    } catch (error) {
+      console.error('Failed to parse config', error);
+      return;
+    }
   }
 
   public updateDisplay(): void {
     this.applyFilters(true, 0);
-    // this.status.innerHTML = `Output ${previewImg.width * this.scaleRatio} by
+    // this.status.innerHTML = `Output ${previewImg.width * this.scaleRatio}
+    // by
     // ${ previewImg.height * this.scaleRatio}.`;
   }
 
@@ -150,6 +167,13 @@ window.onOpenCvReady = () => {
           app.loadImage(file);
           saveBtn.disabled = false;
           updateBtn.disabled = false;
+        }
+      });
+  document.getElementById('configInput')
+      ?.addEventListener('change', async (e: Event) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          await app.loadConfig(file);
         }
       });
   saveBtn.addEventListener('click', () => app.saveImage());

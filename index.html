@@ -22,13 +22,15 @@ button, input { padding: 8px 12px; margin-right: 10px; }
 <body>
     <h2>Perspective Straightener</h2>
     <div class="controls">
-        <input type="file" id="imageInput" accept="image/*">
+        Image: <input type="file" id="imageInput" accept="image/*">
+        Config: <input type="file" id="configInput" accept=".json">
         <button id="saveBtn" disabled>Save</button>
         <button id="updateBtn" disabled>Update</button>
         <span id="status">Loading OpenCV.js...</span>
     </div>
 
     <div id="canvas-container"></div>
+    <pre id="filter-config"></pre>
 
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
     <script type="module" src="./dist/main.js"></script>

@@ -14,6 +14,10 @@ class VignetteFilter extends DraggablePointsFilter {
     this.addDraggablePoints([{x: 0.5, y: 0.5}]);
   }
 
+  protected get filterType(): string {
+    return 'VignetteFilter';
+  }
+
   public update(preview: boolean): void {
     const focalPoint = this.getPixelPoint(this.points[0]!);
     const maxWidth = this.inputMat.cols;

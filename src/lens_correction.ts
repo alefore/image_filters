@@ -1,13 +1,11 @@
-import {ImageFilter, ImageFilterFactory, Point} from './filter.js';
+import {FilterConfig, ImageFilter, ImageFilterFactory, Point} from './filter.js';
 
 class LensCorrectionFilter implements ImageFilter {
   private readonly distortionValue: HTMLInputElement;
 
   constructor(
-      private readonly container: HTMLElement,
-      private readonly inputCanvas: HTMLCanvasElement,
-      private readonly inputMat: any, private readonly outputMat: any,
-      private readonly onUpdate: () => void) {
+      private readonly container: HTMLElement, private readonly inputMat: any,
+      private readonly outputMat: any, private readonly onUpdate: () => void) {
     const div = document.createElement('div');
     container.append(div);
 
@@ -29,6 +27,18 @@ class LensCorrectionFilter implements ImageFilter {
     div.append(this.distortionValue);
   }
 
+  public getConfig(): FilterConfig {
+    return {
+      type: 'LensCorrectionFilter',
+      distortionValue: parseFloat(this.distortionValue.value)
+    };
+  }
+
+  public loadConfig(config: FilterConfig): void {
+    this.distortionValue.value = `${config.distortionValue}`;
+    this.onUpdate();
+  }
+
   public update(preview: boolean): void {
     const value = parseFloat(this.distortionValue.value);
     const cv = (window as any).cv;
@@ -37,9 +47,9 @@ class LensCorrectionFilter implements ImageFilter {
       this.inputMat.copyTo(this.outputMat);
       return;
     }
-    const f = Math.max(this.inputCanvas.width, this.inputCanvas.height);
-    const cx = this.inputCanvas.width / 2.0;
-    const cy = this.inputCanvas.height / 2.0;
+    const f = Math.max(this.inputMat.cols, this.inputMat.rows);
+    const cx = this.inputMat.cols / 2.0;
+    const cy = this.inputMat.rows / 2.0;
 
     // 3x3 Camera Matrix must be CV_64F (double precision)
     const cameraMatrix =
@@ -58,8 +68,7 @@ export class LensCorrectionFilterFactory implements ImageFilterFactory {
   public install(
       container: HTMLElement, inputCanvas: HTMLCanvasElement, inputMat: any,
       outputMat: any, onUpdate: () => void): ImageFilter {
-    return new LensCorrectionFilter(
-        container, inputCanvas, inputMat, outputMat, onUpdate);
+    return new LensCorrectionFilter(container, inputMat, outputMat, onUpdate);
   }
 
   public name() {

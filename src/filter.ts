@@ -1,5 +1,13 @@
+export interface FilterConfig {
+  type: string;
+  [key: string]: any;
+}
+
 export interface ImageFilter {
   update(preview: boolean): void;
+
+  getConfig(): FilterConfig;
+  loadConfig(config: FilterConfig): void;
 }
 
 export interface ImageFilterFactory {
@@ -31,9 +39,25 @@ export abstract class DraggablePointsFilter implements ImageFilter {
   }
 
   public abstract update(preview: boolean): void;
+  protected abstract get filterType(): string;
 
-  public addDraggablePoints(pt: Point[]) {
+  protected addDraggablePoints(pt: Point[]) {
     this.points.push(...pt);
+  }
+
+  public getConfig(): FilterConfig {
+    // Deliberately do a deep-copy of points.
+    return {
+      type: this.filterType,
+      points: this.points.map(p => ({x: p.x, y: p.y}))
+    };
+  }
+
+  public loadConfig(config: FilterConfig): void {
+    if (config.points && Array.isArray(config.points)) {
+      this.points = config.points.map((p: any) => ({x: p.x, y: p.y}));
+    }
+    this.onUpdate();
   }
 
   private attachEventListeners(): void {
