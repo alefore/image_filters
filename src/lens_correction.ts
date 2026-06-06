@@ -1,30 +1,23 @@
 import {FilterConfig, ImageFilter, ImageFilterFactory, Point} from './filter.js';
+import {newRangeSliderControl} from './settings.js';
 
 class LensCorrectionFilter implements ImageFilter {
   private readonly distortionValue: HTMLInputElement;
 
   constructor(
       private readonly container: HTMLElement, private readonly inputMat: any,
-      private readonly outputMat: any, private readonly onUpdate: () => void) {
+      private readonly outputMat: any, onUpdate: () => void) {
     const div = document.createElement('div');
-    container.append(div);
-
-    const label = document.createElement('label') as HTMLLabelElement;
-    label.htmlFor = 'distortion';
-    label.textContent = 'Lens: ';
-    div.append(label);
-
-    // Create the input element
-    this.distortionValue = document.createElement('input') as HTMLInputElement;
-    this.distortionValue.type = 'range';
-    this.distortionValue.min = '-1.0';
-    this.distortionValue.max = '1.0';
-    this.distortionValue.step = '0.01';
-    this.distortionValue.value = '0';
-    this.distortionValue.id = 'distortion';
-    this.distortionValue.addEventListener(
-        'input', (e: Event) => this.onUpdate());
-    div.append(this.distortionValue);
+    this.distortionValue = newRangeSliderControl(div, {
+      id: 'distortion',
+      label: 'Lens',
+      min: -1.0,
+      max: 1.0,
+      step: 0.01,
+      initialValue: 0,
+      onUpdate: onUpdate
+    });
+    container.appendChild(div);
   }
 
   public getConfig(): FilterConfig {
@@ -36,13 +29,10 @@ class LensCorrectionFilter implements ImageFilter {
 
   public loadConfig(config: FilterConfig): void {
     this.distortionValue.value = `${config.distortionValue}`;
-    this.onUpdate();
   }
 
   public update(preview: boolean): void {
     const value = parseFloat(this.distortionValue.value);
-    const cv = (window as any).cv;
-
     if (value === 0) {
       this.inputMat.copyTo(this.outputMat);
       return;
@@ -50,6 +40,8 @@ class LensCorrectionFilter implements ImageFilter {
     const f = Math.max(this.inputMat.cols, this.inputMat.rows);
     const cx = this.inputMat.cols / 2.0;
     const cy = this.inputMat.rows / 2.0;
+
+    const cv = (window as any).cv;
 
     // 3x3 Camera Matrix must be CV_64F (double precision)
     const cameraMatrix =

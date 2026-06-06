@@ -57,7 +57,6 @@ export abstract class DraggablePointsFilter implements ImageFilter {
     if (config.points && Array.isArray(config.points)) {
       this.points = config.points.map((p: any) => ({x: p.x, y: p.y}));
     }
-    this.onUpdate();
   }
 
   private attachEventListeners(): void {

@@ -1,24 +1,55 @@
-import {DraggablePointsFilter, ImageFilter, ImageFilterFactory, Point} from './filter.js';
+import {DraggablePointsFilter, FilterConfig, ImageFilter, ImageFilterFactory} from './filter.js';
+import {newRangeSliderControl} from './settings.js';
 
 class VignetteFilter extends DraggablePointsFilter {
-  private maxOpacity = 0.85;
+  private readonly maxOpacity: HTMLInputElement;
 
   private tempCanvas: HTMLCanvasElement;
 
   constructor(
-      inputCanvas: HTMLCanvasElement, inputMat: any, private outputMat: any,
-      onUpdate: () => void) {
+      container: HTMLElement, inputCanvas: HTMLCanvasElement, inputMat: any,
+      private outputMat: any, onUpdate: () => void) {
     super(inputCanvas, inputMat, onUpdate);
 
     this.tempCanvas = document.createElement('canvas');
     this.addDraggablePoints([{x: 0.5, y: 0.5}]);
+
+    const div = document.createElement('div');
+    this.maxOpacity = newRangeSliderControl(div, {
+      id: 'max-opacity',
+      label: 'Opacity',
+      min: 0,
+      max: 1.0,
+      step: 0.01,
+      initialValue: 0.55,
+      onUpdate: onUpdate
+    });
+    container.appendChild(div);
   }
 
   protected get filterType(): string {
     return 'VignetteFilter';
   }
 
+  public getConfig(): FilterConfig {
+    const baseConfig = super.getConfig();
+    return {...baseConfig, opacity: parseFloat(this.maxOpacity.value)};
+  }
+
+  public loadConfig(config: FilterConfig): void {
+    super.loadConfig(config);
+    if (typeof config.opacity === 'number') {
+      this.maxOpacity.value = `${config.opacity}`;
+    }
+  }
+
   public update(preview: boolean): void {
+    const maxOpacityValue = parseFloat(this.maxOpacity.value);
+    if (maxOpacityValue === 0) {
+      this.inputMat.copyTo(this.outputMat);
+      return;
+    }
+
     const focalPoint = this.getPixelPoint(this.points[0]!);
     const maxWidth = this.inputMat.cols;
     const maxHeight = this.inputMat.rows;
@@ -53,7 +84,7 @@ class VignetteFilter extends DraggablePointsFilter {
 
       // Smoothstep formula
       const easedT = (t * t * (3 - 2 * t));
-      const currentOpacity = this.maxOpacity * easedT;
+      const currentOpacity = maxOpacityValue * easedT;
 
       gradient.addColorStop(t, `rgba(0, 0, 0, ${currentOpacity})`);
     }
@@ -74,7 +105,8 @@ export class VignetteFilterFactory implements ImageFilterFactory {
   public install(
       container: HTMLElement, inputCanvas: HTMLCanvasElement, inputMat: any,
       outputMat: any, onUpdate: () => void): ImageFilter {
-    return new VignetteFilter(inputCanvas, inputMat, outputMat, onUpdate);
+    return new VignetteFilter(
+        container, inputCanvas, inputMat, outputMat, onUpdate);
   }
 
   public name() {

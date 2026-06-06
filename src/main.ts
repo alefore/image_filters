@@ -1,3 +1,4 @@
+import {BlackAndWhiteFilterFactory} from './black_and_white.js';
 import {type FilterConfig, type ImageFilter, type Point} from './filter.js';
 import {generateImageCanvas} from './image.js';
 import {LensCorrectionFilterFactory} from './lens_correction.js';
@@ -74,7 +75,7 @@ class PerspectiveEditor {
       targetHeight: number): void {
     const filterFactories = [
       new LensCorrectionFilterFactory(), new PerspectiveFilterFactory(),
-      new VignetteFilterFactory()
+      new VignetteFilterFactory(), new BlackAndWhiteFilterFactory()
     ];
     let container = document.getElementById('canvas-container')!;
     this.inputMat = new window.cv.Mat();
@@ -131,6 +132,7 @@ class PerspectiveEditor {
       console.error('Failed to parse config', error);
       return;
     }
+    this.updateDisplay();
   }
 
   public updateDisplay(): void {
