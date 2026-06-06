@@ -78,6 +78,7 @@ class PerspectiveEditor {
       new VignetteFilterFactory(), new BlackAndWhiteFilterFactory()
     ];
     let container = document.getElementById('canvas-container')!;
+    container.replaceChildren();
     this.inputMat = new window.cv.Mat();
     let inputMat = this.inputMat;
     let inputCanvas = initialCanvas;
