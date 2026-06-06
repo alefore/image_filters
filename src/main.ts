@@ -81,6 +81,7 @@ class PerspectiveEditor {
     this.inputMat = new window.cv.Mat();
     let inputMat = this.inputMat;
     let inputCanvas = initialCanvas;
+    this.filtersData = [];
     filterFactories.forEach((factory, index) => {
       const details = document.createElement('details');
       details.open = true;
