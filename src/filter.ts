@@ -5,7 +5,7 @@ export interface ImageFilter {
 export interface ImageFilterFactory {
   install(
       parametersContainer: HTMLElement, inputCanvas: HTMLCanvasElement,
-      inputMat: any, outputMat: any): ImageFilter;
+      inputMat: any, outputMat: any, onUpdate: () => void): ImageFilter;
 
   name(): string;
 }
@@ -25,7 +25,8 @@ export abstract class DraggablePointsFilter implements ImageFilter {
 
   constructor(
       protected readonly inputCanvas: HTMLCanvasElement,
-      protected readonly inputMat: any) {
+      protected readonly inputMat: any,
+      protected readonly onUpdate: () => void) {
     this.attachEventListeners();
   }
 
@@ -85,8 +86,7 @@ export abstract class DraggablePointsFilter implements ImageFilter {
     this.points[this.draggingPointIndex].x += dx;
     this.points[this.draggingPointIndex].y += dy;
     this.lastMousePos = pos;
-
-    this.update(true);
+    this.onUpdate();
   }
 
   private onMouseUp(): void {

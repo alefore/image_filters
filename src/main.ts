@@ -40,7 +40,7 @@ class PerspectiveEditor {
     this.highResImage = new Image();
 
     this.highResImage.onload = () => {
-      const MAX_DIMENSION = 600;
+      const MAX_DIMENSION = 800;
       let targetWidth = this.highResImage!.width;
       let targetHeight = this.highResImage!.height;
 
@@ -81,14 +81,17 @@ class PerspectiveEditor {
     this.inputMat = new window.cv.Mat();
     let inputMat = this.inputMat;
     let inputCanvas = initialCanvas;
-    filterFactories.forEach((factory) => {
+    filterFactories.forEach((factory, index) => {
       const details = document.createElement('details');
+      details.open = true;
       const summary = document.createElement('summary');
       summary.innerHTML = factory.name();
       details.appendChild(summary);
       const cv = (window as any).cv;
       const outputMat = new cv.Mat();
-      const filter = factory.install(details, inputCanvas, inputMat, outputMat);
+      const filter = factory.install(
+          details, inputCanvas, inputMat, outputMat,
+          () => this.applyFilters(true, index));
       const outputCanvas = document.createElement('canvas');
       details.appendChild(outputCanvas);
       container.appendChild(details);
@@ -98,11 +101,12 @@ class PerspectiveEditor {
     });
   }
 
-  private applyFilters(preview: boolean) {
-    const inputMat =
-        window.cv.imread(preview ? this.lowResImage : this.highResImage);
+  private applyFilters(preview: boolean, initialIndex: number) {
+    const inputMat = initialIndex === 0 ?
+        window.cv.imread(preview ? this.lowResImage : this.highResImage) :
+        this.filtersData[initialIndex - 1].outputMat;
     inputMat.copyTo(this.inputMat);
-    this.filtersData.forEach((filterData) => {
+    this.filtersData.slice(initialIndex).forEach((filterData) => {
       filterData.filter.update(preview);
       if (preview) {
         filterData.outputCanvas.width = filterData.outputMat.cols;
@@ -110,11 +114,11 @@ class PerspectiveEditor {
         window.cv.imshow(filterData.outputCanvas, filterData.outputMat);
       }
     });
-    inputMat.delete();
+    if (initialIndex === 0) inputMat.delete();
   }
 
   public updateDisplay(): void {
-    this.applyFilters(true);
+    this.applyFilters(true, 0);
     // this.status.innerHTML = `Output ${previewImg.width * this.scaleRatio} by
     // ${ previewImg.height * this.scaleRatio}.`;
   }
@@ -122,7 +126,7 @@ class PerspectiveEditor {
   public saveImage(): void {
     const cv = window.cv;
     const link = document.createElement('a');
-    this.applyFilters(false);
+    this.applyFilters(false, 0);
     link.download = 'output.jpg';
     const lastFilterData = this.filtersData[this.filtersData.length - 1];
     const tmpCanvas = document.createElement('canvas');

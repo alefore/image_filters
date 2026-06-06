@@ -6,8 +6,9 @@ class VignetteFilter extends DraggablePointsFilter {
   private tempCanvas: HTMLCanvasElement;
 
   constructor(
-      inputCanvas: HTMLCanvasElement, inputMat: any, private outputMat: any) {
-    super(inputCanvas, inputMat);
+      inputCanvas: HTMLCanvasElement, inputMat: any, private outputMat: any,
+      onUpdate: () => void) {
+    super(inputCanvas, inputMat, onUpdate);
 
     this.tempCanvas = document.createElement('canvas');
     this.addDraggablePoints([{x: 0.5, y: 0.5}]);
@@ -68,8 +69,8 @@ class VignetteFilter extends DraggablePointsFilter {
 export class VignetteFilterFactory implements ImageFilterFactory {
   public install(
       container: HTMLElement, inputCanvas: HTMLCanvasElement, inputMat: any,
-      outputMat: any): ImageFilter {
-    return new VignetteFilter(inputCanvas, inputMat, outputMat);
+      outputMat: any, onUpdate: () => void): ImageFilter {
+    return new VignetteFilter(inputCanvas, inputMat, outputMat, onUpdate);
   }
 
   public name() {

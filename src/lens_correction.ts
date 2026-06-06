@@ -6,7 +6,8 @@ class LensCorrectionFilter implements ImageFilter {
   constructor(
       private readonly container: HTMLElement,
       private readonly inputCanvas: HTMLCanvasElement,
-      private readonly inputMat: any, private readonly outputMat: any) {
+      private readonly inputMat: any, private readonly outputMat: any,
+      private readonly onUpdate: () => void) {
     const div = document.createElement('div');
     container.append(div);
 
@@ -23,8 +24,9 @@ class LensCorrectionFilter implements ImageFilter {
     this.distortionValue.step = '0.01';
     this.distortionValue.value = '0';
     this.distortionValue.id = 'distortion';
+    this.distortionValue.addEventListener(
+        'input', (e: Event) => this.onUpdate());
     div.append(this.distortionValue);
-    // distortionValue.addEventListener('input', (e: Event) => {});
   }
 
   public update(preview: boolean): void {
@@ -55,9 +57,9 @@ class LensCorrectionFilter implements ImageFilter {
 export class LensCorrectionFilterFactory implements ImageFilterFactory {
   public install(
       container: HTMLElement, inputCanvas: HTMLCanvasElement, inputMat: any,
-      outputMat: any): ImageFilter {
+      outputMat: any, onUpdate: () => void): ImageFilter {
     return new LensCorrectionFilter(
-        container, inputCanvas, inputMat, outputMat);
+        container, inputCanvas, inputMat, outputMat, onUpdate);
   }
 
   public name() {

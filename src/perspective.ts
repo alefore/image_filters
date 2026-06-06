@@ -2,8 +2,9 @@ import {DraggablePointsFilter, ImageFilter, ImageFilterFactory, Point} from './f
 
 class PerspectiveFilter extends DraggablePointsFilter {
   constructor(
-      inputCanvas: HTMLCanvasElement, inputMat: any, private outputMat: any) {
-    super(inputCanvas, inputMat);
+      inputCanvas: HTMLCanvasElement, inputMat: any, private outputMat: any,
+      onUpdate: () => void) {
+    super(inputCanvas, inputMat, onUpdate);
     this.addDraggablePoints([
       {x: 0.1, y: 0.1}, {x: 0.9, y: 0.1}, {x: 0.9, y: 0.9}, {x: 0.1, y: 0.9}
     ]);
@@ -82,8 +83,8 @@ class PerspectiveFilter extends DraggablePointsFilter {
 export class PerspectiveFilterFactory implements ImageFilterFactory {
   public install(
       container: HTMLElement, inputCanvas: HTMLCanvasElement, inputMat: any,
-      outputMat: any): ImageFilter {
-    return new PerspectiveFilter(inputCanvas, inputMat, outputMat);
+      outputMat: any, onUpdate: () => void): ImageFilter {
+    return new PerspectiveFilter(inputCanvas, inputMat, outputMat, onUpdate);
   }
 
   public name() {
