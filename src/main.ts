@@ -2,6 +2,7 @@ import './lens_correction.js';
 import './perspective.js';
 import './vignette.js';
 import './black_and_white.js';
+import './rotate.js';
 import './crop.js';
 
 import {type FilterConfig, type ImageFilter, type Point} from './filter.js';
