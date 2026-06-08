@@ -1,4 +1,6 @@
-import {DraggablePointsFilter, FilterConfig, ImageFilter, ImageFilterFactory} from './filter.js';
+import {DraggablePointsFilter} from './draggable_points.js';
+import {FilterConfig, ImageFilter, ImageFilterFactory} from './filter.js';
+import {filterRegistry} from './registry.js';
 import {newRangeSliderControl} from './settings.js';
 
 class VignetteFilter extends DraggablePointsFilter {
@@ -113,3 +115,5 @@ export class VignetteFilterFactory implements ImageFilterFactory {
     return 'Vignette';
   }
 }
+
+filterRegistry.register(new VignetteFilterFactory);

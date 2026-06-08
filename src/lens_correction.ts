@@ -1,4 +1,5 @@
 import {FilterConfig, ImageFilter, ImageFilterFactory, Point} from './filter.js';
+import {filterRegistry} from './registry.js';
 import {newRangeSliderControl} from './settings.js';
 
 class LensCorrectionFilter implements ImageFilter {
@@ -22,7 +23,7 @@ class LensCorrectionFilter implements ImageFilter {
 
   public getConfig(): FilterConfig {
     return {
-      type: 'LensCorrectionFilter',
+      type: 'Lens Correction',
       distortionValue: parseFloat(this.distortionValue.value)
     };
   }
@@ -67,3 +68,5 @@ export class LensCorrectionFilterFactory implements ImageFilterFactory {
     return 'Lens Correction';
   }
 }
+
+filterRegistry.register(new LensCorrectionFilterFactory());

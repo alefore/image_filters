@@ -1,4 +1,5 @@
 import {FilterConfig, ImageFilter, ImageFilterFactory} from './filter.js';
+import {filterRegistry} from './registry.js';
 
 export class BlackAndWhiteFilter implements ImageFilter {
   constructor(private inputMat: any, private outputMat: any) {}
@@ -30,3 +31,5 @@ export class BlackAndWhiteFilterFactory implements ImageFilterFactory {
     return 'Black & White';
   }
 }
+
+filterRegistry.register(new BlackAndWhiteFilterFactory);

@@ -1,4 +1,6 @@
-import {DraggablePointsFilter, ImageFilter, ImageFilterFactory, Point} from './filter.js';
+import {DraggablePointsFilter} from './draggable_points.js';
+import {FilterConfig, ImageFilter, ImageFilterFactory} from './filter.js';
+import {filterRegistry} from './registry.js';
 
 class PerspectiveFilter extends DraggablePointsFilter {
   constructor(
@@ -97,3 +99,5 @@ export class PerspectiveFilterFactory implements ImageFilterFactory {
     return 'Perspective';
   }
 }
+
+filterRegistry.register(new PerspectiveFilterFactory);

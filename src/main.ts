@@ -1,9 +1,11 @@
-import {BlackAndWhiteFilterFactory} from './black_and_white.js';
+import './lens_correction.js';
+import './perspective.js';
+import './vignette.js';
+import './black_and_white.js';
+
 import {type FilterConfig, type ImageFilter, type Point} from './filter.js';
 import {generateImageCanvas} from './image.js';
-import {LensCorrectionFilterFactory} from './lens_correction.js';
-import {PerspectiveFilterFactory} from './perspective.js';
-import {VignetteFilterFactory} from './vignette.js';
+import {filterRegistry} from './registry.js';
 
 // declare global {
 //   interface Window {
@@ -23,7 +25,7 @@ class PerspectiveEditor {
 
   private highResImage: HTMLImageElement|null = null;
   private lowResImage: HTMLImageElement|null = null;
-  private inputMat: any = null;
+  private readonly inputMat: any = new window.cv.Mat();
 
   private filtersData: FilterData[] = [];
   private inputCanvas: HTMLCanvasElement;
@@ -40,7 +42,6 @@ class PerspectiveEditor {
         'change', () => this.updateLowResImage());
 
     this.inputCanvas = document.createElement('canvas');
-    this.installFilters();
   }
 
   public loadImage(file: File): void {
@@ -84,28 +85,29 @@ class PerspectiveEditor {
     this.lowResImage.src = this.inputCanvas.toDataURL('image/jpeg', 0.95);
   }
 
-  private installFilters(): void {
-    const filterFactories = [
-      new LensCorrectionFilterFactory(), new PerspectiveFilterFactory(),
-      new VignetteFilterFactory(), new BlackAndWhiteFilterFactory()
-    ];
+  private installFilters(configs: FilterConfig[]): void {
     let container = document.getElementById('canvas-container')!;
     container.replaceChildren();
-    this.inputMat = new window.cv.Mat();
     let inputMat = this.inputMat;
     let inputCanvas = this.inputCanvas;
     this.filtersData = [];
-    filterFactories.forEach((factory, index) => {
+    configs.forEach((data, index) => {
+      const filterName = data['type'];
+      console.log(`Apply filter: ${filterName}`);
+      const filterFactory = filterRegistry.get(filterName);
+      if (!filterFactory) throw new Error(`Unknown filter: ${filterName}`);
       const details = document.createElement('details');
       details.open = true;
       const summary = document.createElement('summary');
-      summary.innerHTML = factory.name();
+      summary.innerHTML = filterFactory.name();
       details.appendChild(summary);
       const cv = (window as any).cv;
+      // TODO: Keep track of previous `outputMat` values and delete them here.
       const outputMat = new cv.Mat();
-      const filter = factory.install(
+      const filter = filterFactory.install(
           details, inputCanvas, inputMat, outputMat,
           () => this.applyFilters(true, index));
+      filter.loadConfig(data);
       const outputCanvas = document.createElement('canvas');
       details.appendChild(outputCanvas);
       container.appendChild(details);
@@ -138,10 +140,7 @@ class PerspectiveEditor {
   public async loadConfig(file: File): Promise<void> {
     const jsonString = await file.text();
     try {
-      const loadedConfigs: FilterConfig[] = JSON.parse(jsonString);
-      this.filtersData.forEach(
-          (filterData, index) =>
-              filterData.filter.loadConfig(loadedConfigs[index]));
+      this.installFilters(JSON.parse(jsonString));
     } catch (error) {
       console.error('Failed to parse config', error);
       return;
