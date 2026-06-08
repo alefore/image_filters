@@ -18,9 +18,7 @@ class VignetteFilter extends DraggablePointsFilter {
     this.tempCanvas = document.createElement('canvas');
     this.addDraggablePoints([{x: 0.5, y: 0.5}]);
 
-    const div = document.createElement('div');
-    container.appendChild(div);
-    this.settings = new SettingsContainer(div, onUpdate);
+    this.settings = new SettingsContainer(container, onUpdate);
     this.opacity = this.settings.addRangeSlider({
       id: 'opacity',
       label: 'Opacity',
