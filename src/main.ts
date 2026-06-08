@@ -87,7 +87,7 @@ class PerspectiveEditor {
 
   private installFilters(configs: FilterConfig[]): void {
     let container = document.getElementById('canvas-container')!;
-    container.replaceChildren();
+    container.replaceChildren(this.inputCanvas);
     let inputMat = this.inputMat;
     let inputCanvas = this.inputCanvas;
     this.filtersData = [];
