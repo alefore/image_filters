@@ -13,7 +13,7 @@ class PerspectiveFilter extends DraggablePointsFilter {
   }
 
   protected get filterType(): string {
-    return 'PerspectiveFilter';
+    return 'Perspective';
   }
 
   public update(preview: boolean): void {

@@ -1,24 +1,25 @@
 import {FilterConfig, ImageFilter, ImageFilterFactory, Point} from './filter.js';
 import {filterRegistry} from './registry.js';
-import {newRangeSliderControl} from './settings.js';
+import {SettingsContainer} from './settings.js';
 
 class LensCorrectionFilter implements ImageFilter {
   private readonly distortionValue: HTMLInputElement;
+  private readonly settings: SettingsContainer;
 
   constructor(
       private readonly container: HTMLElement, private readonly inputMat: any,
       private readonly outputMat: any, onUpdate: () => void) {
     const div = document.createElement('div');
-    this.distortionValue = newRangeSliderControl(div, {
+    container.appendChild(div);
+    this.settings = new SettingsContainer(div, onUpdate);
+    this.distortionValue = this.settings.addRangeSlider({
       id: 'distortion',
       label: 'Lens',
       min: -1.0,
       max: 1.0,
       step: 0.01,
       initialValue: 0,
-      onUpdate: onUpdate
     });
-    container.appendChild(div);
   }
 
   public getConfig(): FilterConfig {

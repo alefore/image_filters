@@ -42,6 +42,8 @@ class PerspectiveEditor {
         'change', () => this.updateLowResImage());
 
     this.inputCanvas = document.createElement('canvas');
+    document.getElementById('canvas-container')!.replaceChildren(
+        this.inputCanvas);
   }
 
   public loadImage(file: File): void {

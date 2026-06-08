@@ -1,11 +1,13 @@
 import {DraggablePointsFilter} from './draggable_points.js';
 import {FilterConfig, ImageFilter, ImageFilterFactory} from './filter.js';
 import {filterRegistry} from './registry.js';
-import {newRangeSliderControl} from './settings.js';
+import {SettingsContainer} from './settings.js';
 
 class VignetteFilter extends DraggablePointsFilter {
-  private readonly maxOpacity: HTMLInputElement;
+  private readonly opacity: HTMLInputElement;
+  private readonly innerRadius: HTMLInputElement;
 
+  private readonly settings: SettingsContainer;
   private tempCanvas: HTMLCanvasElement;
 
   constructor(
@@ -17,37 +19,43 @@ class VignetteFilter extends DraggablePointsFilter {
     this.addDraggablePoints([{x: 0.5, y: 0.5}]);
 
     const div = document.createElement('div');
-    this.maxOpacity = newRangeSliderControl(div, {
-      id: 'max-opacity',
+    container.appendChild(div);
+    this.settings = new SettingsContainer(div, onUpdate);
+    this.opacity = this.settings.addRangeSlider({
+      id: 'opacity',
       label: 'Opacity',
       min: 0,
       max: 1.0,
       step: 0.01,
       initialValue: 0.55,
-      onUpdate: onUpdate
     });
-    container.appendChild(div);
+    this.innerRadius = this.settings.addRangeSlider({
+      id: 'inner-radius',
+      label: 'Inner radius',
+      min: 0,
+      max: 1.0,
+      step: 0.01,
+      initialValue: 0.4,
+    });
   }
 
   protected get filterType(): string {
-    return 'VignetteFilter';
+    return 'Vignette';
   }
 
   public getConfig(): FilterConfig {
-    const baseConfig = super.getConfig();
-    return {...baseConfig, opacity: parseFloat(this.maxOpacity.value)};
+    return this.settings.augmentConfig(super.getConfig())
   }
 
   public loadConfig(config: FilterConfig): void {
     super.loadConfig(config);
-    if (typeof config.opacity === 'number') {
-      this.maxOpacity.value = `${config.opacity}`;
-    }
+    this.settings.loadConfig(config);
   }
 
   public update(preview: boolean): void {
-    const maxOpacityValue = parseFloat(this.maxOpacity.value);
-    if (maxOpacityValue === 0) {
+    const opacityValue = parseFloat(this.opacity.value);
+    const innerRadiusRatio = parseFloat(this.innerRadius.value);
+    if (opacityValue === 0 || innerRadiusRatio === 1) {
       this.inputMat.copyTo(this.outputMat);
       return;
     }
@@ -55,10 +63,6 @@ class VignetteFilter extends DraggablePointsFilter {
     const focalPoint = this.getPixelPoint(this.points[0]!);
     const maxWidth = this.inputMat.cols;
     const maxHeight = this.inputMat.rows;
-    const innerRadius = Math.max(maxWidth, maxHeight) * 0.4;
-
-    console.log(
-        'Vignette updating', focalPoint, maxWidth, maxHeight, innerRadius);
 
     this.tempCanvas.width = maxWidth;
     this.tempCanvas.height = maxHeight;
@@ -76,17 +80,22 @@ class VignetteFilter extends DraggablePointsFilter {
         Math.hypot(maxWidth - focalPoint.x, maxHeight - focalPoint.y);
     const outerRadius = Math.max(distTL, distTR, distBL, distBR);
 
+    const innerRadius = outerRadius * innerRadiusRatio;
+
+    console.log(
+        'Vignette updating', focalPoint, maxWidth, maxHeight, innerRadius);
+
     const gradient = tempCtx.createRadialGradient(
         focalPoint.x, focalPoint.y, innerRadius, focalPoint.x, focalPoint.y,
         outerRadius);
 
-    const steps = 10;
+    const steps = 50;
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
 
       // Smoothstep formula
       const easedT = (t * t * (3 - 2 * t));
-      const currentOpacity = maxOpacityValue * easedT;
+      const currentOpacity = opacityValue * easedT;
 
       gradient.addColorStop(t, `rgba(0, 0, 0, ${currentOpacity})`);
     }
