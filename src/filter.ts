@@ -106,8 +106,10 @@ export abstract class DraggablePointsFilter implements ImageFilter {
       dy *= 0.1;
     }
 
-    this.points[this.draggingPointIndex].x += dx;
-    this.points[this.draggingPointIndex].y += dy;
+    this.points[this.draggingPointIndex].x = Math.max(
+        0, Math.min(this.points[this.draggingPointIndex].x + dx, 0.9999999));
+    this.points[this.draggingPointIndex].y = Math.max(
+        0, Math.min(this.points[this.draggingPointIndex].y + dy, 0.9999999));
     this.lastMousePos = pos;
     this.onUpdate();
   }

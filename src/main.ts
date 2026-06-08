@@ -26,53 +26,65 @@ class PerspectiveEditor {
   private inputMat: any = null;
 
   private filtersData: FilterData[] = [];
+  private inputCanvas: HTMLCanvasElement;
 
   constructor(
       public readonly generator:
           ((points: Point[], sourceMat: any, showGrid: boolean,
-            focalPoint?: Point) => HTMLCanvasElement)) {
+            focalPoint?: Point) => HTMLCanvasElement),
+      private readonly previewResolution: HTMLInputElement) {
     this.status = document.getElementById('status')!;
     this.status.innerText = 'Upload an image to begin.';
+
+    this.previewResolution.addEventListener(
+        'change', () => this.updateLowResImage());
+
+    this.inputCanvas = document.createElement('canvas');
+    this.installFilters();
   }
 
   public loadImage(file: File): void {
     const url = URL.createObjectURL(file);
     this.highResImage = new Image();
-
     this.highResImage.onload = () => {
-      const MAX_DIMENSION = 800;
-      let targetWidth = this.highResImage!.width;
-      let targetHeight = this.highResImage!.height;
-
-      // Calculate ratio and create the smaller UI proxy
-      if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
-        const ratio =
-            Math.min(MAX_DIMENSION / targetWidth, MAX_DIMENSION / targetHeight);
-        targetWidth = Math.round(targetWidth * ratio);
-        targetHeight = Math.round(targetHeight * ratio);
-      }
-
-      const inputCanvas = document.createElement('canvas');
-      inputCanvas.width = targetWidth;
-      inputCanvas.height = targetHeight;
-      const ctx = inputCanvas.getContext('2d')!;
-      ctx.drawImage(this.highResImage!, 0, 0, targetWidth, targetHeight);
-
-      this.lowResImage = new Image();
-      this.lowResImage.onload = () => {
-        this.installFilters(inputCanvas, targetWidth, targetHeight);
-        this.updateDisplay();
-        URL.revokeObjectURL(url);
-      };
-      this.lowResImage.src = inputCanvas.toDataURL('image/jpeg', 0.95);
+      this.updateLowResImage();
+      URL.revokeObjectURL(url);
     };
-
     this.highResImage.src = url;
   }
 
-  private installFilters(
-      initialCanvas: HTMLCanvasElement, targetWidth: number,
-      targetHeight: number): void {
+  private updateLowResImage() {
+    console.log('updateLowResImage');
+    if (!this.highResImage) return;
+    let targetWidth = this.highResImage!.width;
+    let targetHeight = this.highResImage!.height;
+    if (this.previewResolution.value === 'Original') {
+      console.log('Image update: No scaling.');
+    } else {
+      const maxDimension = parseFloat(this.previewResolution.value);
+      console.log(`Image update: Scaling: ${maxDimension}`);
+      // Calculate ratio and create the smaller UI proxy
+      if (targetWidth > maxDimension || targetHeight > maxDimension) {
+        const ratio =
+            Math.min(maxDimension / targetWidth, maxDimension / targetHeight);
+        targetWidth = Math.round(targetWidth * ratio);
+        targetHeight = Math.round(targetHeight * ratio);
+      }
+    }
+
+    this.inputCanvas.width = targetWidth;
+    this.inputCanvas.height = targetHeight;
+    const ctx = this.inputCanvas.getContext('2d')!;
+    ctx.drawImage(this.highResImage!, 0, 0, targetWidth, targetHeight);
+
+    this.lowResImage = new Image();
+    this.lowResImage.onload = () => {
+      this.updateDisplay();
+    };
+    this.lowResImage.src = this.inputCanvas.toDataURL('image/jpeg', 0.95);
+  }
+
+  private installFilters(): void {
     const filterFactories = [
       new LensCorrectionFilterFactory(), new PerspectiveFilterFactory(),
       new VignetteFilterFactory(), new BlackAndWhiteFilterFactory()
@@ -81,7 +93,7 @@ class PerspectiveEditor {
     container.replaceChildren();
     this.inputMat = new window.cv.Mat();
     let inputMat = this.inputMat;
-    let inputCanvas = initialCanvas;
+    let inputCanvas = this.inputCanvas;
     this.filtersData = [];
     filterFactories.forEach((factory, index) => {
       const details = document.createElement('details');
@@ -157,29 +169,31 @@ class PerspectiveEditor {
   }
 }
 
-let app: PerspectiveEditor;
-
 window.onOpenCvReady = () => {
-  const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
-  const updateBtn = document.getElementById('updateBtn') as HTMLButtonElement;
-  app = new PerspectiveEditor(generateImageCanvas);
+  window.cv['onRuntimeInitialized'] = () => {
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const updateBtn = document.getElementById('updateBtn') as HTMLButtonElement;
+    const app = new PerspectiveEditor(
+        generateImageCanvas,
+        document.getElementById('maxDimension')! as HTMLInputElement);
 
-  document.getElementById('imageInput')
-      ?.addEventListener('change', (e: Event) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          app.loadImage(file);
-          saveBtn.disabled = false;
-          updateBtn.disabled = false;
-        }
-      });
-  document.getElementById('configInput')
-      ?.addEventListener('change', async (e: Event) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          await app.loadConfig(file);
-        }
-      });
-  saveBtn.addEventListener('click', () => app.saveImage());
-  updateBtn.addEventListener('click', () => app.updateDisplay());
+    document.getElementById('imageInput')
+        ?.addEventListener('change', (e: Event) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file) {
+            app.loadImage(file);
+            saveBtn.disabled = false;
+            updateBtn.disabled = false;
+          }
+        });
+    document.getElementById('configInput')
+        ?.addEventListener('change', async (e: Event) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file) {
+            await app.loadConfig(file);
+          }
+        });
+    saveBtn.addEventListener('click', () => app.saveImage());
+    updateBtn.addEventListener('click', () => app.updateDisplay());
+  };
 };
