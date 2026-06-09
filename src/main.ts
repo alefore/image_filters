@@ -180,13 +180,16 @@ class PerspectiveEditor {
     configs.forEach((config, index) => {
       const data = this.appendFilter(config['type']);
       data.filter.loadConfig(config);
+      console.log('Filter installed.');
     });
     // this.applyFilters(true, 0);
   }
 
   private applyFilters(preview: boolean, initialIndex: number) {
+    const sourceImage = preview ? this.lowResImage : this.highResImage;
+    if (!sourceImage) return;
     const inputMat = initialIndex === 0 ?
-        window.cv.imread(preview ? this.lowResImage : this.highResImage) :
+        window.cv.imread(sourceImage) :
         this.filtersData[initialIndex - 1].outputMat;
     inputMat.copyTo(this.inputMat);
     this.filtersData.slice(initialIndex).forEach((filterData) => {
@@ -209,10 +212,10 @@ class PerspectiveEditor {
     try {
       this.installFilters(JSON.parse(jsonString));
     } catch (error) {
-      console.error('Failed to parse config', error);
+      console.error(error);
       return;
     }
-    this.updateDisplay();
+    this.applyFilters(true, 0);
   }
 
   public updateDisplay(): void {

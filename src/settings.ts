@@ -110,6 +110,5 @@ export class SettingsContainer {
         }
       }
     });
-    this.onUpdate();
   }
 }
