@@ -9,13 +9,6 @@ import {type FilterConfig, type ImageFilter, type Point} from './filter.js';
 import {generateImageCanvas} from './image.js';
 import {filterRegistry} from './registry.js';
 
-// declare global {
-//   interface Window {
-//     onOpenCvReady: () => void;
-//     cv: any;
-//   }
-// }
-
 interface FilterData {
   filter: ImageFilter;
   outputMat: any;
@@ -23,29 +16,86 @@ interface FilterData {
 }
 
 class PerspectiveEditor {
-  private status: HTMLElement;
-
   private highResImage: HTMLImageElement|null = null;
   private lowResImage: HTMLImageElement|null = null;
   private readonly inputMat: any = new window.cv.Mat();
 
   private filtersData: FilterData[] = [];
   private inputCanvas: HTMLCanvasElement;
+  private canvasContainer: HTMLElement;
+  private previewResolution: HTMLSelectElement;
 
   constructor(
       public readonly generator:
           ((points: Point[], sourceMat: any, showGrid: boolean,
             focalPoint?: Point) => HTMLCanvasElement),
-      private readonly previewResolution: HTMLInputElement) {
-    this.status = document.getElementById('status')!;
-    this.status.innerText = 'Upload an image to begin.';
-
-    this.previewResolution.addEventListener(
-        'change', () => this.updateLowResImage());
+      private readonly controls: HTMLElement) {
+    this.canvasContainer = document.getElementById('canvas-container')!;
+    this.previewResolution = this.appendSelectPreviewResolutionControl();
+    this.appendAddFilterControl();
 
     this.inputCanvas = document.createElement('canvas');
-    document.getElementById('canvas-container')!.replaceChildren(
-        this.inputCanvas);
+    this.canvasContainer.replaceChildren(this.inputCanvas);
+  }
+
+  private appendAddFilterControl(): void {
+    const popoverId = 'filter-menu-popover';
+
+    const trigger = document.createElement('button');
+    trigger.className = 'add-filter-button';
+    trigger.textContent = 'Add Filter';
+    trigger.setAttribute('popovertarget', popoverId);
+
+    const popoverDiv = document.createElement('div');
+    popoverDiv.id = popoverId;
+    popoverDiv.className = 'popover-menu';
+    popoverDiv.setAttribute('popover', 'auto');
+
+    const ul = document.createElement('ul');
+    ul.className = 'filter-list';
+
+    filterRegistry.getAllNames().forEach((name) => {
+      const li = document.createElement('li');
+      const filterButton = document.createElement('button');
+      filterButton.textContent = name;
+      li.appendChild(filterButton);
+      ul.appendChild(li);
+    });
+
+    popoverDiv.appendChild(ul);
+
+    popoverDiv.addEventListener('click', (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const button = target.closest<HTMLButtonElement>('button')!;
+      this.appendFilter(button.textContent);
+      this.applyFilters(true, this.filtersData.length - 1);
+      if ('hidePopover' in popoverDiv &&
+          typeof (popoverDiv as any).hidePopover === 'function') {
+        (popoverDiv as any).hidePopover();
+      }
+    });
+
+    this.controls.appendChild(trigger);
+    this.controls.appendChild(popoverDiv);
+  }
+
+  private appendSelectPreviewResolutionControl(): HTMLSelectElement {
+    const dimensionOptions: string[] =
+        ['400', '600', '800', '1024', '2048', 'Original'];
+    const defaultDimensionOption = '800';
+    const selectElement = document.createElement('select');
+    dimensionOptions.forEach((optionValue: string) => {
+      const optionElement: HTMLOptionElement = document.createElement('option');
+      optionElement.textContent = optionValue;
+      optionElement.value = optionValue;
+      if (optionValue === defaultDimensionOption) {
+        optionElement.selected = true;
+      }
+      selectElement.appendChild(optionElement);
+    });
+    selectElement.addEventListener('change', () => this.updateLowResImage());
+    this.controls.appendChild(selectElement);
+    return selectElement;
   }
 
   public loadImage(file: File): void {
@@ -89,36 +139,49 @@ class PerspectiveEditor {
     this.lowResImage.src = this.inputCanvas.toDataURL('image/jpeg', 0.95);
   }
 
+  private appendFilter(filterName: string): FilterData {
+    console.log(`Append filter: ${filterName}`);
+    const filterFactory = filterRegistry.get(filterName);
+    if (!filterFactory) throw new Error(`Unknown filter: ${filterName}`);
+    const details = document.createElement('details');
+    details.open = true;
+    const summary = document.createElement('summary');
+    summary.innerHTML = filterFactory.name();
+    details.appendChild(summary);
+
+    const outputCanvas = document.createElement('canvas');
+
+    const cv = (window as any).cv;
+    const index = this.filtersData.length;
+    const inputMat =
+        index === 0 ? this.inputMat : this.filtersData.at(-1)!.outputMat;
+    const inputCanvas =
+        index === 0 ? this.inputCanvas : this.filtersData.at(-1)!.outputCanvas;
+    const outputMat = new window.cv.Mat();
+
+    const filter = filterFactory.install(
+        details, inputCanvas, inputMat, outputMat,
+        () => this.applyFilters(true, index));
+
+    details.appendChild(outputCanvas);
+    this.canvasContainer.appendChild(details);
+
+    const filterData: FilterData = {filter, outputMat, outputCanvas};
+    this.filtersData.push(filterData);
+    return filterData;
+  }
+
   private installFilters(configs: FilterConfig[]): void {
-    let container = document.getElementById('canvas-container')!;
-    container.replaceChildren(this.inputCanvas);
-    let inputMat = this.inputMat;
-    let inputCanvas = this.inputCanvas;
+    this.filtersData.forEach((data) => data.outputMat.delete());
     this.filtersData = [];
-    configs.forEach((data, index) => {
-      const filterName = data['type'];
-      console.log(`Apply filter: ${filterName}`);
-      const filterFactory = filterRegistry.get(filterName);
-      if (!filterFactory) throw new Error(`Unknown filter: ${filterName}`);
-      const details = document.createElement('details');
-      details.open = true;
-      const summary = document.createElement('summary');
-      summary.innerHTML = filterFactory.name();
-      details.appendChild(summary);
-      const cv = (window as any).cv;
-      // TODO: Keep track of previous `outputMat` values and delete them here.
-      const outputMat = new cv.Mat();
-      const filter = filterFactory.install(
-          details, inputCanvas, inputMat, outputMat,
-          () => this.applyFilters(true, index));
-      filter.loadConfig(data);
-      const outputCanvas = document.createElement('canvas');
-      details.appendChild(outputCanvas);
-      container.appendChild(details);
-      this.filtersData.push({filter, outputMat, outputCanvas});
-      inputMat = outputMat;
-      inputCanvas = outputCanvas;
+
+    this.canvasContainer.replaceChildren(this.inputCanvas);
+
+    configs.forEach((config, index) => {
+      const data = this.appendFilter(config['type']);
+      data.filter.loadConfig(config);
     });
+    // this.applyFilters(true, 0);
   }
 
   private applyFilters(preview: boolean, initialIndex: number) {
@@ -177,8 +240,7 @@ window.onOpenCvReady = () => {
     const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
     const updateBtn = document.getElementById('updateBtn') as HTMLButtonElement;
     const app = new PerspectiveEditor(
-        generateImageCanvas,
-        document.getElementById('maxDimension')! as HTMLInputElement);
+        generateImageCanvas, document.getElementById('controls')!);
 
     document.getElementById('imageInput')
         ?.addEventListener('change', (e: Event) => {
