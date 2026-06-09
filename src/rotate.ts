@@ -19,7 +19,7 @@ class RotateFilter extends DraggablePointsFilter {
       label: 'Angle',
       min: -180,
       max: 180,
-      step: 1,
+      step: 0.1,
       initialValue: 0,
     });
 
