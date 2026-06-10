@@ -86,18 +86,10 @@ pressing Shift while dragging reduces the effect of dragging by 10.
 The following template selects a few filters with their default parameters:
 
     [
-      {
-        "type": "Lens Correction"
-      },
-      {
-        "type": "Perspective"
-      },
-      {
-        "type": "Vignette"
-      },
-      {
-        "type": "Black & White"
-      }
+      { "type": "Lens Correction" },
+      { "type": "Perspective" },
+      { "type": "Vignette" },
+      { "type": "Black & White" }
     ]
 
 The current JSON configuration (for the filters)
