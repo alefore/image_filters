@@ -2,11 +2,12 @@
 
 ## Introduction
 
-TypeScript client-side[^clientside] non-destructive[^nondestructive]
-image editor software based on OpenCV.
+TypeScript browser-based[^clientside] non-destructive[^nondestructive]
+image editor based on OpenCV.
 
 [^clientside]:
     There's no server synchronization of any kind.
+    Everything happens entirely in your browser.
 
 [^nondestructive]:
     Edits are stored as two separate files:
