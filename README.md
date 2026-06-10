@@ -13,6 +13,9 @@ image editor based on OpenCV.
     Edits are stored as two separate files:
     the output JPEG image and a JSON file describing the filters applied.
 
+You can use it at:
+[https://alefore.github.io/image_filters/](https://alefore.github.io/image_filters/)
+
 I use this for
 [my public photos](http://alejo.ch/3kq) and my
 [sequence of Züri Portals](http://alejo.ch/3ks).
