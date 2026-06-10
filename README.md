@@ -22,9 +22,14 @@ I use this for
 
 ## Design goals
 
+* Sequence of independent filters.
+  To edit an image means simply creating a sequence (or pipeline)
+  of independent filters.
+  Each filter receives as its input the output of the previous filter.
+  Allow visualization of all intermediate stages.
+
 * Reuse logic from OpenCV as much as possible.
-  As much as possible,
-  filter implementations should be trivial shells
+  Filter implementations should be trivial shells
   that just call into OpenCV
   (but allow real-time visualization of the resulting images).
 
