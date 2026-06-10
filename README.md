@@ -20,6 +20,24 @@ I use this for
 [my public photos](http://alejo.ch/3kq) and my
 [sequence of Züri Portals](http://alejo.ch/3ks).
 
+## Design goals
+
+* Reuse logic from OpenCV as much as possible.
+  As much as possible,
+  filter implementations should be trivial shells
+  that just call into OpenCV
+  (but allow real-time visualization of the resulting images).
+
+* Non-destructive.
+  The original input image should never be modified.
+  Instead, we configure a sequence (or pipeline) of filters,
+  and export the configuration as a JSON file.
+
+* Completely client-side (browser-based).
+  No server component.
+  In the future, I would like to have a CLI implementation
+  (to enable "re-apply all filters"-type scripting).
+
 ## Usage
 
 The expected usage is:
