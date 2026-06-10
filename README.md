@@ -43,6 +43,12 @@ I use this for
   In the future, I would like to have a CLI implementation
   (to enable "re-apply all filters"-type scripting).
 
+* Image manipulations stored in text-oriented format.
+  The configuration (of the sequence of filters applied to an image)
+  should be exported in a format that allows us to easily modify it
+  with a text editor (or other text-oriented tools)
+  and commit it to a source-code repository.
+
 ## Usage
 
 The expected usage is:
