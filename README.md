@@ -52,6 +52,10 @@ xxxx.jpg
 xxxx.json
 :    The small JSON file with the set of filters applied
 
+When dragging points over an image
+(e.g., to configure the center of the vignette),
+pressing Shift while dragging reduces the effect of dragging by 10.
+
 ## Example JSON
 
 The following template selects a few filters with their default parameters:
