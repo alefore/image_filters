@@ -24,11 +24,12 @@ I use this for
 
 The expected usage is:
 
-1. Upload an image file.
+1. Click "Choose File" to select an image file
+   (no actual upload happens: the file remains local in your browser).
    This shows a small preview.
 
-2. Optionally, upload a template specifying a sequence of filters to apply.
-   See [examples/](examples/) for some examples.
+2. Optionally, use the 2nd "Choose File" button to select a template
+   specifying a sequence of filters to apply.
    This adds a visualization of the output of each filter.
    This can be used to quickly set some pre-defined modifications.
 
@@ -43,20 +44,15 @@ The expected usage is:
 
 I usually end up with 3 files:
 
-xxxx.original.jpg
-:   The original (input) file, unmodified.
-
-xxxx.jpg
-:   The output of applying all the filters.
-
-xxxx.json
-:    The small JSON file with the set of filters applied
+* xxxx.original.jpg: The original (input) file, unmodified.
+* xxxx.jpg: The output of applying all the filters.
+* xxxx.json: The small JSON file with the set of filters applied
 
 When dragging points over an image
 (e.g., to configure the center of the vignette),
 pressing Shift while dragging reduces the effect of dragging by 10.
 
-## Example JSON
+## Example template
 
 The following template selects a few filters with their default parameters:
 
@@ -74,6 +70,11 @@ The following template selects a few filters with their default parameters:
         "type": "Black & White"
       }
     ]
+
+The current JSON configuration (for the filters)
+is shown at the bottom of the page (initially just `[]`).
+As you add filters or modify their parameters,
+this configuration is updated.
 
 ## Filters implemented
 

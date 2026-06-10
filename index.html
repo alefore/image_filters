@@ -40,10 +40,21 @@ button, input { padding: 8px 12px; margin-right: 10px; }
   flex-direction: column;
   gap: 4px;
 }
+#filter-config {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 16px;
+  background-color: #f9fafb;
+  overflow-x: auto;
+
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
 </style>
 </head>
 <body>
-    <h2>Filter Container</h2>
+    <h2>Image Filters</h2>
     <div id="controls">
         Image: <input type="file" id="imageInput" accept="image/*">
         Config: <input type="file" id="configInput" accept=".json">
@@ -52,6 +63,7 @@ button, input { padding: 8px 12px; margin-right: 10px; }
     </div>
 
     <div id="canvas-container"></div>
+    <h2>Filters Configuration (JSON)</h2>
     <pre id="filter-config"></pre>
 
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
