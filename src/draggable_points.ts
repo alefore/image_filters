@@ -6,7 +6,8 @@ export abstract class DraggablePointsFilter implements ImageFilter {
   protected dragRadius = 0.05;
 
   private draggingPointIndex: number|null = null;
-  private lastMousePos: Point|null = null;
+  private lastPointerPos: Point|null = null;
+  private activePointerId: number|null = null;
 
   constructor(
       protected readonly inputCanvas: HTMLCanvasElement,
@@ -37,13 +38,18 @@ export abstract class DraggablePointsFilter implements ImageFilter {
   }
 
   private attachEventListeners(): void {
-    this.inputCanvas.addEventListener('mousedown', this.onMouseDown.bind(this));
-    this.inputCanvas.addEventListener('mousemove', this.onMouseMove.bind(this));
-    this.inputCanvas.addEventListener('mouseup', this.onMouseUp.bind(this));
-    this.inputCanvas.addEventListener('mouseleave', this.onMouseUp.bind(this));
+    // Prevent the browser from streating drags as scroll/zoom gestures.
+    this.inputCanvas.style.touchAction = 'none';
+    this.inputCanvas.addEventListener(
+        'pointerdown', this.onPointerDown.bind(this));
+    this.inputCanvas.addEventListener(
+        'pointermove', this.onPointerMove.bind(this));
+    this.inputCanvas.addEventListener('pointerup', this.onPointerUp.bind(this));
+    this.inputCanvas.addEventListener(
+        'pointercancel', this.onPointerUp.bind(this));
   }
 
-  private getMousePos(e: MouseEvent): Point {
+  private getPointerPos(e: PointerEvent): Point {
     const rect = this.inputCanvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return {x: 0, y: 0};
 
@@ -56,44 +62,53 @@ export abstract class DraggablePointsFilter implements ImageFilter {
     };
   }
 
-  private onMouseDown(e: MouseEvent): void {
-    const pos = this.getMousePos(e);
+  private onPointerDown(e: PointerEvent): void {
+    if (this.activePointerId !== null)
+      return;  // Already dragging with another finger.
+    const pos = this.getPointerPos(e);
+
+    // Fingers are less precise than a cursor.
+    const radius =
+        e.pointerType === 'touch' ? this.dragRadius * 2 : this.dragRadius;
 
     for (let i = 0; i < this.points.length; i++) {
       const pt = this.points[i];
-      const dist = Math.hypot(pt.x - pos.x, pt.y - pos.y);
-
-      if (dist < this.dragRadius) {
+      if (Math.hypot(pt.x - pos.x, pt.y - pos.y) < radius) {
         this.draggingPointIndex = i;
-        this.lastMousePos = pos;
+        this.lastPointerPos = pos;
+        this.activePointerId = e.pointerId;
+        this.inputCanvas.setPointerCapture(e.pointerId);
+        e.preventDefault();
         return;
       }
     }
   }
 
-  private onMouseMove(e: MouseEvent): void {
-    if (this.draggingPointIndex === null || !this.lastMousePos) return;
+  private onPointerMove(e: PointerEvent): void {
+    if (e.pointerId !== this.activePointerId) return;
+    if (this.draggingPointIndex === null || !this.lastPointerPos) return;
 
-    const pos = this.getMousePos(e);
-    let dx = pos.x - this.lastMousePos.x;
-    let dy = pos.y - this.lastMousePos.y;
+    const pos = this.getPointerPos(e);
+    let dx = pos.x - this.lastPointerPos.x;
+    let dy = pos.y - this.lastPointerPos.y;
 
     if (e.shiftKey) {
       dx *= 0.1;
       dy *= 0.1;
     }
 
-    this.points[this.draggingPointIndex].x = Math.max(
-        0, Math.min(this.points[this.draggingPointIndex].x + dx, 0.9999999));
-    this.points[this.draggingPointIndex].y = Math.max(
-        0, Math.min(this.points[this.draggingPointIndex].y + dy, 0.9999999));
-    this.lastMousePos = pos;
+    const p = this.points[this.draggingPointIndex];
+    p.x = Math.max(0, Math.min(p.x + dx, 0.9999999));
+    p.y = Math.max(0, Math.min(p.y + dy, 0.9999999));
+    this.lastPointerPos = pos;
     this.onUpdate();
   }
 
-  private onMouseUp(): void {
+  private onPointerUp(e: PointerEvent): void {
+    if (e.pointerId !== this.activePointerId) return;
     this.draggingPointIndex = null;
-    this.lastMousePos = null;
+    this.lastPointerPos = null;
+    this.activePointerId = null;
   }
 
   protected getPixelPoint(normalizedPoint: Point): Point {
