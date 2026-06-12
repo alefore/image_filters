@@ -14,7 +14,11 @@ canvas {
     cursor: crosshair;
 }
 #controls { margin-bottom: 20px; }
-button, input { padding: 8px 12px; margin-right: 10px; }
+button, input, select {
+  padding: 8px 12px;
+  margin-left: 4px;
+  margin-right: 4px;
+}
 .filter-controls {
   position: relative;
   display: inline-block;
@@ -40,7 +44,7 @@ button, input { padding: 8px 12px; margin-right: 10px; }
   flex-direction: column;
   gap: 4px;
 }
-#filter-config {
+pre#filters-config {
   border: 1px solid #d1d5db;
   border-radius: 6px;
   padding: 16px;
@@ -57,13 +61,10 @@ button, input { padding: 8px 12px; margin-right: 10px; }
     <div id="controls">
         Image: <input type="file" id="imageInput" accept="image/*">
         Config: <input type="file" id="configInput" accept=".json">
-        <button id="saveBtn" disabled>Save</button>
-        <button id="updateBtn" disabled>Update</button>
     </div>
 
     <div id="canvas-container"></div>
-    <h2>Filters Configuration (JSON)</h2>
-    <pre id="filter-config"></pre>
+    <div id="filters-config"></div>
 
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
     <script type="module" src="main.js"></script>

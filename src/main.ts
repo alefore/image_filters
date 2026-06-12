@@ -15,15 +15,18 @@ interface FilterData {
   outputCanvas: HTMLCanvasElement;
 }
 
+const defaultPreviewResolutionDimension = '800';
+
 class PerspectiveEditor {
   private highResImage: HTMLImageElement|null = null;
   private lowResImage: HTMLImageElement|null = null;
   private readonly inputMat: any = new window.cv.Mat();
 
   private filtersData: FilterData[] = [];
-  private inputCanvas: HTMLCanvasElement;
+  private inputCanvas: HTMLCanvasElement|null = null;
   private canvasContainer: HTMLElement;
-  private previewResolution: HTMLSelectElement;
+  private previewResolution: HTMLSelectElement|null = null;
+  private jsonView: HTMLElement|null = null;
 
   constructor(
       public readonly generator:
@@ -31,11 +34,22 @@ class PerspectiveEditor {
             focalPoint?: Point) => HTMLCanvasElement),
       private readonly controls: HTMLElement) {
     this.canvasContainer = document.getElementById('canvas-container')!;
+  }
+
+  private onFirstImageLoaded(): void {
     this.previewResolution = this.appendSelectPreviewResolutionControl();
     this.appendAddFilterControl();
-
+    this.appendSaveButton();
     this.inputCanvas = document.createElement('canvas');
     this.canvasContainer.replaceChildren(this.inputCanvas);
+
+    const configOutputDiv = document.getElementById('filters-config')!;
+    const h2 = document.createElement('h2');
+    h2.textContent = 'Filters Configuration (JSON)';
+    this.jsonView = document.createElement('pre');
+    this.jsonView.id = 'filters-config'
+    configOutputDiv.appendChild(h2);
+    configOutputDiv.appendChild(this.jsonView);
   }
 
   private appendAddFilterControl(): void {
@@ -43,7 +57,7 @@ class PerspectiveEditor {
 
     const trigger = document.createElement('button');
     trigger.className = 'add-filter-button';
-    trigger.textContent = 'Add Filter';
+    trigger.textContent = '+Filter';
     trigger.setAttribute('popovertarget', popoverId);
 
     const popoverDiv = document.createElement('div');
@@ -79,16 +93,22 @@ class PerspectiveEditor {
     this.controls.appendChild(popoverDiv);
   }
 
+  private appendSaveButton(): void {
+    const button = document.createElement('button');
+    button.textContent = 'Save';
+    button.addEventListener('click', () => this.saveImage());
+    this.controls.appendChild(button);
+  }
+
   private appendSelectPreviewResolutionControl(): HTMLSelectElement {
     const dimensionOptions: string[] =
         ['400', '600', '800', '1024', '2048', 'Original'];
-    const defaultDimensionOption = '800';
     const selectElement = document.createElement('select');
     dimensionOptions.forEach((optionValue: string) => {
       const optionElement: HTMLOptionElement = document.createElement('option');
       optionElement.textContent = optionValue;
       optionElement.value = optionValue;
-      if (optionValue === defaultDimensionOption) {
+      if (optionValue === defaultPreviewResolutionDimension) {
         optionElement.selected = true;
       }
       selectElement.appendChild(optionElement);
@@ -113,10 +133,12 @@ class PerspectiveEditor {
     if (!this.highResImage) return;
     let targetWidth = this.highResImage!.width;
     let targetHeight = this.highResImage!.height;
-    if (this.previewResolution.value === 'Original') {
+    if (this.previewResolution && this.previewResolution.value === 'Original') {
       console.log('Image update: No scaling.');
     } else {
-      const maxDimension = parseFloat(this.previewResolution.value);
+      const maxDimension = parseFloat(
+          this.previewResolution ? this.previewResolution.value :
+                                   defaultPreviewResolutionDimension);
       console.log(`Image update: Scaling: ${maxDimension}`);
       // Calculate ratio and create the smaller UI proxy
       if (targetWidth > maxDimension || targetHeight > maxDimension) {
@@ -127,16 +149,19 @@ class PerspectiveEditor {
       }
     }
 
-    this.inputCanvas.width = targetWidth;
-    this.inputCanvas.height = targetHeight;
-    const ctx = this.inputCanvas.getContext('2d')!;
+    if (this.inputCanvas === null) {
+      this.onFirstImageLoaded();
+    }
+    this.inputCanvas!.width = targetWidth;
+    this.inputCanvas!.height = targetHeight;
+    const ctx = this.inputCanvas!.getContext('2d')!;
     ctx.drawImage(this.highResImage!, 0, 0, targetWidth, targetHeight);
 
     this.lowResImage = new Image();
     this.lowResImage.onload = () => {
-      this.updateDisplay();
+      this.applyFilters(true, 0);
     };
-    this.lowResImage.src = this.inputCanvas.toDataURL('image/jpeg', 0.95);
+    this.lowResImage.src = this.inputCanvas!.toDataURL('image/jpeg', 0.95);
   }
 
   private appendFilter(filterName: string): FilterData {
@@ -156,7 +181,7 @@ class PerspectiveEditor {
     const inputMat =
         index === 0 ? this.inputMat : this.filtersData.at(-1)!.outputMat;
     const inputCanvas =
-        index === 0 ? this.inputCanvas : this.filtersData.at(-1)!.outputCanvas;
+        index === 0 ? this.inputCanvas! : this.filtersData.at(-1)!.outputCanvas;
     const outputMat = new window.cv.Mat();
 
     const filter = filterFactory.install(
@@ -175,7 +200,7 @@ class PerspectiveEditor {
     this.filtersData.forEach((data) => data.outputMat.delete());
     this.filtersData = [];
 
-    this.canvasContainer.replaceChildren(this.inputCanvas);
+    this.canvasContainer.replaceChildren(this.inputCanvas!);
 
     configs.forEach((config, index) => {
       const data = this.appendFilter(config['type']);
@@ -201,8 +226,7 @@ class PerspectiveEditor {
       }
     });
     if (initialIndex === 0) inputMat.delete();
-
-    document.getElementById('filter-config')!.textContent = JSON.stringify(
+    this.jsonView!.textContent = JSON.stringify(
         this.filtersData.map(filterData => filterData.filter.getConfig()), null,
         2);
   }
@@ -216,13 +240,6 @@ class PerspectiveEditor {
       return;
     }
     this.applyFilters(true, 0);
-  }
-
-  public updateDisplay(): void {
-    this.applyFilters(true, 0);
-    // this.status.innerHTML = `Output ${previewImg.width * this.scaleRatio}
-    // by
-    // ${ previewImg.height * this.scaleRatio}.`;
   }
 
   public saveImage(): void {
@@ -240,18 +257,13 @@ class PerspectiveEditor {
 
 window.onOpenCvReady = () => {
   window.cv['onRuntimeInitialized'] = () => {
-    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
-    const updateBtn = document.getElementById('updateBtn') as HTMLButtonElement;
     const app = new PerspectiveEditor(
         generateImageCanvas, document.getElementById('controls')!);
-
     document.getElementById('imageInput')
         ?.addEventListener('change', (e: Event) => {
           const file = (e.target as HTMLInputElement).files?.[0];
           if (file) {
             app.loadImage(file);
-            saveBtn.disabled = false;
-            updateBtn.disabled = false;
           }
         });
     document.getElementById('configInput')
@@ -261,7 +273,5 @@ window.onOpenCvReady = () => {
             await app.loadConfig(file);
           }
         });
-    saveBtn.addEventListener('click', () => app.saveImage());
-    updateBtn.addEventListener('click', () => app.updateDisplay());
   };
 };
