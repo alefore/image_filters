@@ -23,14 +23,11 @@ class LensCorrectionFilter implements ImageFilter {
   }
 
   public getConfig(): FilterConfig {
-    return {
-      type: 'Lens Correction',
-      distortionValue: parseFloat(this.distortionValue.value)
-    };
+    return this.settings.augmentConfig({type: 'Lens Correction'});
   }
 
   public loadConfig(config: FilterConfig): void {
-    this.distortionValue.value = `${config.distortionValue}`;
+    this.settings.loadConfig(config);
   }
 
   public update(preview: boolean): void {
