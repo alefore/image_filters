@@ -105,3 +105,5 @@ this configuration is updated.
 * Black & White
 * Rotate
 * Crop
+* Brightness & Contrast
+* Color Tune (Saturation & Warmth)

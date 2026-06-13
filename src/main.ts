@@ -4,6 +4,8 @@ import './vignette.js';
 import './black_and_white.js';
 import './rotate.js';
 import './crop.js';
+import './contrast_brightness.js';
+import './color_tune.js';
 
 import {type FilterConfig, type ImageFilter, type Point} from './filter.js';
 import {generateImageCanvas} from './image.js';
