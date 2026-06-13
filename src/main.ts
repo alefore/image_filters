@@ -26,7 +26,7 @@ class PerspectiveEditor {
   private inputCanvas: HTMLCanvasElement|null = null;
   private canvasContainer: HTMLElement;
   private previewResolution: HTMLSelectElement|null = null;
-  private jsonView: HTMLElement|null = null;
+  private jsonView: HTMLTextAreaElement|null = null;
 
   constructor(
       public readonly generator:
@@ -43,13 +43,27 @@ class PerspectiveEditor {
     this.inputCanvas = document.createElement('canvas');
     this.canvasContainer.replaceChildren(this.inputCanvas);
 
-    const configOutputDiv = document.getElementById('filters-config')!;
     const h2 = document.createElement('h2');
     h2.textContent = 'Filters Configuration (JSON)';
-    this.jsonView = document.createElement('pre');
-    this.jsonView.id = 'filters-config'
-    configOutputDiv.appendChild(h2);
-    configOutputDiv.appendChild(this.jsonView);
+
+    this.jsonView = document.createElement('textarea');
+    this.jsonView.id = 'filters-config';
+    this.jsonView.spellcheck = false;
+    this.jsonView.autocomplete = 'off';
+    this.jsonView.autocapitalize = 'off';
+    this.jsonView.wrap = 'off';
+    this.jsonView.setAttribute('autocorrect', 'off');
+    this.jsonView.addEventListener(
+        'input', () => this.loadConfig(this.jsonView!.value));
+    const configOutputDiv = document.getElementById('filters-config')!;
+    configOutputDiv.replaceChildren(h2, this.jsonView);
+  }
+
+  private syncJsonView() {
+    if (document.activeElement === this.jsonView) return;
+    this.jsonView!.value = JSON.stringify(
+        this.filtersData.map(filterData => filterData.filter.getConfig()), null,
+        2);
   }
 
   private appendAddFilterControl(): void {
@@ -226,13 +240,10 @@ class PerspectiveEditor {
       }
     });
     if (initialIndex === 0) inputMat.delete();
-    this.jsonView!.textContent = JSON.stringify(
-        this.filtersData.map(filterData => filterData.filter.getConfig()), null,
-        2);
+    this.syncJsonView();
   }
 
-  public async loadConfig(file: File): Promise<void> {
-    const jsonString = await file.text();
+  public loadConfig(jsonString: string): void {
     try {
       this.installFilters(JSON.parse(jsonString));
     } catch (error) {
@@ -270,7 +281,8 @@ window.onOpenCvReady = () => {
         ?.addEventListener('change', async (e: Event) => {
           const file = (e.target as HTMLInputElement).files?.[0];
           if (file) {
-            await app.loadConfig(file);
+            const jsonString = await file.text();
+            await app.loadConfig(jsonString);
           }
         });
   };

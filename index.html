@@ -44,15 +44,25 @@ button, input, select {
   flex-direction: column;
   gap: 4px;
 }
-pre#filters-config {
+textarea#filters-config {
   border: 1px solid #d1d5db;
   border-radius: 6px;
   padding: 16px;
   overflow-x: auto;
-
   font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
   font-size: 14px;
   line-height: 1.5;
+  white-space: pre;
+  box-sizing: border-box;
+  width: 100%;
+  display: block;
+  resize: vertical;
+  background: inherit;
+  color: inherit;
+  tab-size: 2;
+  field-sizing: content;
+  min-height: 4lh;
+  max-height: 80vh;
 }
 </style>
 </head>
