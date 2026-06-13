@@ -17,9 +17,9 @@ export interface SelectSettings {
 }
 
 export class SettingsContainer {
-  div: HTMLElement;
-  sliders: HTMLInputElement[] = [];
-  selects: HTMLSelectElement[] = [];
+  private div: HTMLElement;
+  private sliders: HTMLInputElement[] = [];
+  private selects: HTMLSelectElement[] = [];
 
   constructor(container: HTMLElement, private readonly onUpdate: () => void) {
     this.div = document.createElement('div');
