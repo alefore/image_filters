@@ -119,7 +119,6 @@ export abstract class DraggablePointsFilter implements ImageFilter {
   }
 
   protected drawInputPoints(): void {
-    window.cv.imshow(this.inputCanvas, this.inputMat);
     const inputCtx = this.inputCanvas.getContext('2d');
     if (!inputCtx) return;
     this.points.forEach(normalizedPoint => {

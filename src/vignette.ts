@@ -1,4 +1,5 @@
 import {DraggablePointsFilter} from './draggable_points.js';
+import {showLinearInCanvas, srgbToLinear} from './encoding.js';
 import {FilterConfig, ImageFilter, ImageFilterFactory} from './filter.js';
 import {filterRegistry} from './registry.js';
 import {SettingsContainer} from './settings.js';
@@ -68,8 +69,8 @@ class VignetteFilter extends DraggablePointsFilter {
     const tempCtx =
         this.tempCanvas.getContext('2d', {willReadFrequently: true}) as
         CanvasRenderingContext2D;
-
-    window.cv.imshow(this.tempCanvas, this.inputMat);
+    tempCtx.fillStyle = 'white';
+    tempCtx.fillRect(0, 0, maxWidth, maxHeight);
 
     const distTL = Math.hypot(focalPoint.x, focalPoint.y);
     const distTR = Math.hypot(maxWidth - focalPoint.x, focalPoint.y);
@@ -77,15 +78,14 @@ class VignetteFilter extends DraggablePointsFilter {
     const distBR =
         Math.hypot(maxWidth - focalPoint.x, maxHeight - focalPoint.y);
     const outerRadius = Math.max(distTL, distTR, distBL, distBR);
-
     const innerRadius = outerRadius * innerRadiusRatio;
-
-    console.log(
-        'Vignette updating', focalPoint, maxWidth, maxHeight, innerRadius);
 
     const gradient = tempCtx.createRadialGradient(
         focalPoint.x, focalPoint.y, innerRadius, focalPoint.x, focalPoint.y,
         outerRadius);
+
+    console.log(
+        'Vignette updating', focalPoint, maxWidth, maxHeight, innerRadius);
 
     const steps = 50;
     for (let i = 0; i <= steps; i++) {
@@ -94,16 +94,43 @@ class VignetteFilter extends DraggablePointsFilter {
       // Smoothstep formula
       const easedT = (t * t * (3 - 2 * t));
       const currentOpacity = opacityValue * easedT;
-
       gradient.addColorStop(t, `rgba(0, 0, 0, ${currentOpacity})`);
     }
 
     tempCtx.fillStyle = gradient;
     tempCtx.fillRect(0, 0, maxWidth, maxHeight);
 
-    const resultMat = window.cv.imread(this.tempCanvas);
-    resultMat.copyTo(this.outputMat);
-    resultMat.delete();
+    const srgbMask = window.cv.imread(this.tempCanvas);  // 8-bit RGBA
+    const grayMask = new window.cv.Mat();
+    window.cv.cvtColor(
+        srgbMask, grayMask, window.cv.COLOR_RGBA2GRAY);  // 8-bit Single Channel
+    srgbMask.delete();
+
+    const floatMask = new window.cv.Mat();
+    grayMask.convertTo(
+        floatMask, window.cv.CV_32F, 1.0 / 255.0);  // 0.0 - 1.0 Float
+    grayMask.delete();
+
+    const channels = new window.cv.MatVector();
+    window.cv.split(this.inputMat, channels);
+    const n = channels.size();
+    const colorCount = n === 4 ? 3 : n;  // Leave Alpha channel alone
+
+    const mats: any[] = [];
+    for (let i = 0; i < n; i++) mats.push(channels.get(i));
+
+    for (let i = 0; i < colorCount; i++) {
+      const c = mats[i];
+      window.cv.multiply(c, floatMask, c);  // Linear light * Falloff
+      channels.set(i, c);
+    }
+
+    window.cv.merge(channels, this.outputMat);
+
+    for (let i = 0; i < n; i++) mats[i].delete();
+    channels.delete();
+    floatMask.delete();
+
     if (preview) {
       this.drawInputPoints();
     }

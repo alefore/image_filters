@@ -7,6 +7,7 @@ import './crop.js';
 import './contrast_brightness.js';
 import './color_tune.js';
 
+import {showLinearInCanvas, srgbToLinear} from './encoding.js';
 import {type FilterConfig, type ImageFilter, type Point} from './filter.js';
 import {generateImageCanvas} from './image.js';
 import {filterRegistry} from './registry.js';
@@ -17,15 +18,20 @@ interface FilterData {
   outputCanvas: HTMLCanvasElement;
 }
 
+interface MatWithOwnershipInfo {
+  mat: any;
+  owned: boolean;
+}
+
 const defaultPreviewResolutionDimension = '800';
 
 class PerspectiveEditor {
-  private highResImage: HTMLImageElement|null = null;
-  private lowResImage: HTMLImageElement|null = null;
-  private readonly inputMat: any = new window.cv.Mat();
+  private highResMatLinear: any = new window.cv.Mat();
+  private lowResMatLinear: any = new window.cv.Mat();
+  private firstFilterInputMat: any = new window.cv.Mat();
 
   private filtersData: FilterData[] = [];
-  private inputCanvas: HTMLCanvasElement|null = null;
+  private inputCanvas: HTMLCanvasElement = document.createElement('canvas');
   private canvasContainer: HTMLElement;
   private previewResolution: HTMLSelectElement|null = null;
   private jsonView: HTMLTextAreaElement|null = null;
@@ -42,7 +48,6 @@ class PerspectiveEditor {
     this.previewResolution = this.appendSelectPreviewResolutionControl();
     this.appendAddFilterControl();
     this.appendSaveButton();
-    this.inputCanvas = document.createElement('canvas');
     this.canvasContainer.replaceChildren(this.inputCanvas);
 
     const h2 = document.createElement('h2');
@@ -136,19 +141,23 @@ class PerspectiveEditor {
 
   public loadImage(file: File): void {
     const url = URL.createObjectURL(file);
-    this.highResImage = new Image();
-    this.highResImage.onload = () => {
+    const image = new Image();
+    image.onload = () => {
+      const srgbMat = window.cv.imread(image);
+      srgbToLinear(srgbMat, this.highResMatLinear);
+      srgbMat.delete();
       this.updateLowResImage();
       URL.revokeObjectURL(url);
     };
-    this.highResImage.src = url;
+    image.src = url;
   }
 
   private updateLowResImage() {
     console.log('updateLowResImage');
-    if (!this.highResImage) return;
-    let targetWidth = this.highResImage!.width;
-    let targetHeight = this.highResImage!.height;
+    if (!this.highResMatLinear)
+      throw new Error('Attempted to update low res without high res.');
+    this.inputCanvas.width = this.highResMatLinear.cols;
+    this.inputCanvas.height = this.highResMatLinear.rows;
     if (this.previewResolution && this.previewResolution.value === 'Original') {
       console.log('Image update: No scaling.');
     } else {
@@ -156,28 +165,28 @@ class PerspectiveEditor {
           this.previewResolution ? this.previewResolution.value :
                                    defaultPreviewResolutionDimension);
       console.log(`Image update: Scaling: ${maxDimension}`);
-      // Calculate ratio and create the smaller UI proxy
-      if (targetWidth > maxDimension || targetHeight > maxDimension) {
-        const ratio =
-            Math.min(maxDimension / targetWidth, maxDimension / targetHeight);
-        targetWidth = Math.round(targetWidth * ratio);
-        targetHeight = Math.round(targetHeight * ratio);
+      if (this.inputCanvas.width > maxDimension ||
+          this.inputCanvas.height > maxDimension) {
+        const ratio = Math.min(
+            maxDimension / this.inputCanvas.width,
+            maxDimension / this.inputCanvas.height);
+        this.inputCanvas.width = Math.round(this.inputCanvas.width * ratio);
+        this.inputCanvas.height = Math.round(this.inputCanvas.height * ratio);
       }
     }
 
-    if (this.inputCanvas === null) {
+    if (!this.jsonView) {
       this.onFirstImageLoaded();
     }
-    this.inputCanvas!.width = targetWidth;
-    this.inputCanvas!.height = targetHeight;
-    const ctx = this.inputCanvas!.getContext('2d')!;
-    ctx.drawImage(this.highResImage!, 0, 0, targetWidth, targetHeight);
 
-    this.lowResImage = new Image();
-    this.lowResImage.onload = () => {
-      this.applyFilters(true, 0);
-    };
-    this.lowResImage.src = this.inputCanvas!.toDataURL('image/jpeg', 0.95);
+    const dsize =
+        new window.cv.Size(this.inputCanvas.width, this.inputCanvas.height);
+    window.cv.resize(
+        this.highResMatLinear, this.lowResMatLinear, dsize, 0, 0,
+        window.cv.INTER_AREA);
+    this.inputCanvas.width = this.inputCanvas.width;
+    this.inputCanvas.height = this.inputCanvas.height;
+    this.applyFilters(true, 0);
   }
 
   private appendFilter(filterName: string): FilterData {
@@ -194,10 +203,10 @@ class PerspectiveEditor {
 
     const cv = (window as any).cv;
     const index = this.filtersData.length;
-    const inputMat =
-        index === 0 ? this.inputMat : this.filtersData.at(-1)!.outputMat;
+    const inputMat = index === 0 ? this.firstFilterInputMat :
+                                   this.filtersData.at(-1)!.outputMat;
     const inputCanvas =
-        index === 0 ? this.inputCanvas! : this.filtersData.at(-1)!.outputCanvas;
+        index === 0 ? this.inputCanvas : this.filtersData.at(-1)!.outputCanvas;
     const outputMat = new window.cv.Mat();
 
     const filter = filterFactory.install(
@@ -216,32 +225,40 @@ class PerspectiveEditor {
     this.filtersData.forEach((data) => data.outputMat.delete());
     this.filtersData = [];
 
-    this.canvasContainer.replaceChildren(this.inputCanvas!);
+    this.canvasContainer.replaceChildren(this.inputCanvas);
 
     configs.forEach((config, index) => {
       const data = this.appendFilter(config['type']);
       data.filter.loadConfig(config);
       console.log('Filter installed.');
     });
-    // this.applyFilters(true, 0);
   }
 
   private applyFilters(preview: boolean, initialIndex: number) {
-    const sourceImage = preview ? this.lowResImage : this.highResImage;
-    if (!sourceImage) return;
-    const inputMat = initialIndex === 0 ?
-        window.cv.imread(sourceImage) :
-        this.filtersData[initialIndex - 1].outputMat;
-    inputMat.copyTo(this.inputMat);
-    this.filtersData.slice(initialIndex).forEach((filterData) => {
+    if (initialIndex === 0) {
+      (preview ? this.lowResMatLinear : this.highResMatLinear)
+          .copyTo(this.firstFilterInputMat);
+      if (preview)
+        showLinearInCanvas(this.firstFilterInputMat, this.inputCanvas);
+    } else if (preview) {
+      const prev = this.filtersData[initialIndex - 1];
+      showLinearInCanvas(prev.outputMat, prev.outputCanvas);
+    }
+
+    if (this.filtersData.length === 0) return;
+
+    this.filtersData.slice(initialIndex).forEach((filterData, index) => {
       filterData.filter.update(preview);
       if (preview) {
-        filterData.outputCanvas.width = filterData.outputMat.cols;
-        filterData.outputCanvas.height = filterData.outputMat.rows;
-        window.cv.imshow(filterData.outputCanvas, filterData.outputMat);
+        showLinearInCanvas(filterData.outputMat, filterData.outputCanvas);
+        return;
       }
+      // Clean up previous matrices (which we no longer need) to avoid running
+      // out of memory.
+      const inputMatrix = index === 0 ? this.firstFilterInputMat :
+                                        this.filtersData[index - 1].outputMat;
+      inputMatrix.create(1, 1, window.cv.CV_8U);
     });
-    if (initialIndex === 0) inputMat.delete();
     this.syncJsonView();
   }
 
@@ -256,13 +273,14 @@ class PerspectiveEditor {
   }
 
   public saveImage(): void {
+    if (this.filtersData.length === 0) throw new Error('No filters set up!');
     const cv = window.cv;
     const link = document.createElement('a');
     this.applyFilters(false, 0);
     link.download = 'output.jpg';
-    const lastFilterData = this.filtersData[this.filtersData.length - 1];
     const tmpCanvas = document.createElement('canvas');
-    window.cv.imshow(tmpCanvas, lastFilterData.outputMat);
+    showLinearInCanvas(
+        this.filtersData[this.filtersData.length - 1].outputMat, tmpCanvas);
     link.href = tmpCanvas.toDataURL('image/jpeg', 0.95);
     link.click();
   }
