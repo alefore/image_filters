@@ -283,6 +283,8 @@ class PerspectiveEditor {
         this.filtersData[this.filtersData.length - 1].outputMat, tmpCanvas);
     link.href = tmpCanvas.toDataURL('image/jpeg', 0.95);
     link.click();
+    // Revert back to the preview.
+    this.applyFilters(true, 0);
   }
 }
 
